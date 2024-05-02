@@ -16,6 +16,16 @@ endpoint = "https://api.cognitive.microsofttranslator.com"
 location = os.environ["RESOURCE_LOCATION"]
 
 def translate(text, from_language, to_language):
+    """
+    Function used to call Microsoft API at the dedicated endpoint to 
+    translate the text sent to it to the 'to_language' specified.
+
+    @param  text: the text we wanna to translate.
+            form_language: the source language.
+            to_language: the language we want to translate the text to.
+
+    @return response: a JSON object contains our translated text.
+    """
     path = '/translate'
     constructed_url = endpoint + path
 
@@ -38,6 +48,7 @@ def translate(text, from_language, to_language):
     response = request.json()
     return response
 
+# Test
 if __name__ == '__main__':
     response = translate('Hello', 'en', 'ar')
     print(json.dumps(response, sort_keys=True, ensure_ascii=False, indent=4, separators=(',', ': ')))
