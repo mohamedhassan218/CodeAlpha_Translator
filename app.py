@@ -1,113 +1,78 @@
 """
-    Module contains simple UI to our translator.
-     
+    Module contains simple route that deals with Google Translation API to 
+    translate text.
+
     @author  Mohamed Hassan
-    @since   2024-5-2
+    @since   2024-5-1
 """
-import sys
-from PyQt5.QtWidgets import (
-    QApplication,
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QComboBox,
-    QTextEdit,
-)
 
-# from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt
-from translator import translate
+from flask import Flask, request, render_template, session
+from googletrans import Translator
+import os
+from dotenv import load_dotenv
+
+# Load environment variable.
+load_dotenv()
+secret_key = os.environ["SECRET_KEY"]
 
 
-def test_translate(text, x, y):
-    # A function just to test the logic.
-    return f"Translation from {x} to {y}."
+app = Flask(__name__)
+app.secret_key = secret_key
 
 
-class TranslatorApp(QWidget):
+def translate_google(text, target_language):
     """
-    Class that represents our UI element to abstract
-    the details of the code.
-    
+    Function handles the process of translating a text using Google
+    Translation API.
+
+    @param:
+        text: the input text from the user.
+        target_language: the language we need to translate our text to.
+    @return:
+        translated_text: our result.
     """
-    def __init__(self):
-        super().__init__()
-        self.initUI()
+    trans = Translator()
+    result = trans.translate(text=text, dest=target_language)
+    translated_text = result.text
+    return translated_text
 
-    def initUI(self):
-        layout = QVBoxLayout()
-        self.setStyleSheet("background-color: #E0FFFF;")
 
-        # Create a label for the text input field.
-        self.label = QLabel("Enter text:")
-        layout.addWidget(self.label)
+@app.route("/", methods=["POST", "GET"])
+def translate():
+    # Dictionary to ease the deal with our languages.
+    languages = {
+        "en": "English",
+        "es": "Spanish",
+        "zh-cn": "Chinese (Mandarin)",
+        "hi": "Hindi",
+        "ar": "Arabic",
+        "fr": "French",
+        "ru": "Russian",
+        "pt": "Portuguese",
+        "ja": "Japanese",
+        "de": "German",
+        "sw": "Swahili",
+    }
 
-        # Create a text input field.
-        self.entry = QLineEdit()
-        layout.addWidget(self.entry)
+    if request.method == "POST":
+        src_text = request.form["source_text"]
+        target_lang = request.form["target_language"]
+        translated_text = translate_google(src_text, target_lang)
 
-        # Create a label for the "from" language dropdown menu.
-        self.from_lang_label = QLabel("From Language:")
-        layout.addWidget(self.from_lang_label)
+        # Store the target language in session.
+        session["target_language"] = target_lang
 
-        # Create a dropdown menu with language options for translation source.
-        self.from_lang_combo = QComboBox()
-        self.from_lang_combo.addItems(["English", "French", "Arabic", "German"])
-        layout.addWidget(self.from_lang_combo)
-
-        # Create a label for the "to" language dropdown menu.
-        self.to_lang_label = QLabel("To Language:")
-        layout.addWidget(self.to_lang_label)
-
-        # Create a dropdown menu with language options for translation target.
-        self.to_lang_combo = QComboBox()
-        self.to_lang_combo.addItems(["English", "French", "Arabic", "German"])
-        layout.addWidget(self.to_lang_combo)
-
-        # Create a button to process the translation.
-        self.translate_button = QPushButton("Translate")
-        self.translate_button.setStyleSheet("QPushButton { font-size: 12px; }")
-        self.translate_button.clicked.connect(self.translate_text)
-        layout.addWidget(self.translate_button, alignment=Qt.AlignCenter)
-
-        # Create a text area for displaying the translation result.
-        self.result_text_area = QTextEdit()
-        self.result_text_area.setReadOnly(True)
-        layout.addWidget(self.result_text_area)
-
-        self.setLayout(layout)
-
-    def translate_text(self):
-        # Get the text to be translated.
-        text = self.entry.text()
-
-        # Language mappings for translation.
-        from_lang_map = {
-            "English": "en",
-            "French": "fr",
-            "Arabic": "ar",
-            "German": "de",
-        }
-        to_lang_map = {"English": "en", "French": "fr", "Arabic": "ar", "German": "de"}
-
-        # Test our work . . .
-        translation = test_translate(
-            text,
-            from_lang_map[self.from_lang_combo.currentText()],
-            to_lang_map[self.to_lang_combo.currentText()],
+        return render_template(
+            "index.html",
+            source_text=src_text,
+            translated_text=translated_text,
+            target_language=languages[target_lang],
         )
-        self.result_text_area.setText(translation)
-
-        # Perform the translation using the selected languages and the text entered.
-        # translation = translate(text, from_lang_map[self.from_lang_combo.currentText()], to_lang_map[self.to_lang_combo.currentText()])
-
-        # Set the translated text in the result text area.
-        # self.result_text_area.setText(translation[0]['translations'][0]['text'])
+    else:
+        # Check if target language is stored in session.
+        target_lang = session.get("target_language", "en")
+        return render_template("index.html", target_language=languages[target_lang])
 
 
-app = QApplication(sys.argv)
-translator = TranslatorApp()
-translator.show()
-sys.exit(app.exec_())
+if __name__ == "__main__":
+    app.run(debug=True)
